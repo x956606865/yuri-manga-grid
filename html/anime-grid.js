@@ -1,258 +1,233 @@
-const htmlEl = document.documentElement;
-
+const APIURL = `https://backend.yuributa.com/manga/info/search`;
 const Caches = {};
-const get = async (url)=>{
-
-    if(Caches[url]) return Caches[url];
-    htmlEl.setAttribute('data-no-touch',true);
-    const f = await fetch(url);
-    const data = await f.json();
-    Caches[url] = data;
-    htmlEl.setAttribute('data-no-touch',false);
-    return data;
-}
-
-
-
-
+const htmlEl = document.documentElement;
+const get = async (url) => {
+  //   if (Caches[url]) return Caches[url];
+  htmlEl.setAttribute('data-no-touch', true);
+  const f = await fetch(url);
+  const data = await f.json();
+  Caches[url] = data;
+  htmlEl.setAttribute('data-no-touch', false);
+  return data;
+};
 const Images = {};
-
-const loadImage = (src,onOver)=>{
-    if(Images[src]) return onOver(Images[src]);
-    const el = new Image();
-    el.crossOrigin = 'Anonymous';
-    el.src = src;
-    el.onload = ()=>{
-        onOver(el)
-        Images[src] = el;
-    }
+const loadImage = (src, onOver) => {
+  console.log(
+    '%c [ src ]-16',
+    'font-size:13px; background:pink; color:#bf2c9f;',
+    src
+  );
+  if (Images[src]) return onOver(Images[src]);
+  const el = new Image();
+  el.crossOrigin = 'Anonymous';
+  el.src = src;
+  el.onload = () => {
+    onOver(el);
+    Images[src] = el;
+  };
 };
 
-
-const APIURL = `https://lab.magiconch.com/api/bangumi/`;
-const ImageURL = `https://api.anitabi.cn/bgm/`;
-
-
-const getCoverURLById = id => `${ImageURL}anime/${id}/cover.jpg`;
-
-
-
-
-
+const getCoverURLById = (anime) => {
+  console.log(
+    '%c [ anime ]-27',
+    'font-size:13px; background:pink; color:#bf2c9f;',
+    anime
+  );
+  if (typeof anime === 'string') {
+    return `${anime}?imageView2/2/w/240/format/jpeg/interlace/1`;
+  }
+  return `${anime.cover}?imageView2/2/w/240/format/jpeg/interlace/1`;
+};
 
 class AnimeGrid {
-    constructor({el,title,key,typeTexts,col,row,urlExt = ''}){
-        this.el = el;
+  constructor({ el, title, key, typeTexts, col, row, urlExt = '' }) {
+    this.el = el;
 
-        this.key = key;
-        const types = typeTexts.trim().split(/\n+/g)
-        this.types = types;
-        this.bangumis = [];
-        this.urlExt = urlExt;
+    this.key = key;
+    const types = typeTexts.trim().split(/\n+/g);
+    this.types = types;
+    this.bangumis = [];
+    this.urlExt = urlExt;
 
-        this.title = title;
+    this.title = title;
 
-        this.row = row;
-        this.col = col;
+    this.row = row;
+    this.col = col;
 
-        this.getBangumisFormLocalStorage();
+    this.getBangumisFormLocalStorage();
 
+    el.innerHTML = this.generatorHTML({
+      title,
+      urlExt,
+    });
 
-        el.innerHTML = this.generatorHTML({
-            title,
-            urlExt,
-        });
+    this.currentBangumiIndex = null;
+    this.searchBoxEl = el.querySelector('.search-bangumis-box');
+    this.formEl = el.querySelector('form');
+    this.searchInputEl = this.formEl[0];
+    this.animeListEl = el.querySelector('.anime-list');
 
-        this.currentBangumiIndex = null;
-        this.searchBoxEl = el.querySelector('.search-bangumis-box');
-        this.formEl = el.querySelector('form');
-        this.searchInputEl = this.formEl[0];
-        this.animeListEl = el.querySelector('.anime-list');
+    this.animeListEl.onclick = (e) => {
+      const id = e.target.getAttribute('data-id');
+      if (this.currentBangumiIndex === null) return;
+      this.setCurrentBangumi(id);
+    };
+    this.formEl.onsubmit = async (e) => {
+      if (e) e.preventDefault();
 
+      const keyword = this.searchInputEl.value.trim();
 
-        this.animeListEl.onclick = e=>{
-            const id = +e.target.getAttribute('data-id');
-            if(this.currentBangumiIndex === null) return;
-            this.setCurrentBangumi(id);
-        };
-        this.formEl.onsubmit = async e=>{
-            if(e) e.preventDefault();
-        
-            const keyword = this.searchInputEl.value.trim();
-        
-            this.searchFromAPI(keyword);
-        }
+      this.searchFromAPI(keyword);
+    };
 
-        const canvas = el.querySelector('canvas');
-        const ctx = canvas.getContext('2d');
+    const canvas = el.querySelector('canvas');
+    const ctx = canvas.getContext('2d');
 
-        this.canvas = canvas;
-        this.ctx = ctx;
+    this.canvas = canvas;
+    this.ctx = ctx;
 
-        const bodyMargin = 20;
+    const bodyMargin = 20;
 
+    const contentWidth = col * 120;
+    const contentHeight = row * 187;
 
+    const colWidth = Math.ceil(contentWidth / col);
+    const rowHeight = Math.ceil(contentHeight / row);
+    const titleHeight = 40;
+    const fontHeight = 24;
 
-        const contentWidth = col * 120;
-        const contentHeight = row * 187;
+    this.fontHeight = fontHeight;
 
-        const colWidth = Math.ceil(contentWidth / col);
-        const rowHeight = Math.ceil(contentHeight / row);
-        const titleHeight = 40;
-        const fontHeight = 24;
+    const width = contentWidth + bodyMargin * 2;
+    const height = contentHeight + bodyMargin * 2 + titleHeight + 10;
+    const scale = 2;
 
-        this.fontHeight = fontHeight;
+    canvas.width = width * scale;
+    canvas.height = height * scale;
 
-        const width = contentWidth + bodyMargin * 2;
-        const height = contentHeight + bodyMargin * 2 + titleHeight;
-        const scale = 2;
+    ctx.fillStyle = '#FFF';
+    ctx.fillRect(0, 0, width * scale, height * scale);
 
+    const copyRightText = [
+      '@なつれい',
+      '信息来自百合厨小屋，由yuriwiki提供',
+      '禁止商业、盈利用途',
+    ].join(' · ');
 
-        canvas.width = width * scale;
-        canvas.height = height * scale;
+    ctx.textAlign = 'left';
+    ctx.font = `${9 * scale}px sans-serif`;
+    ctx.fillStyle = '#AAA';
+    ctx.textBaseline = 'middle';
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.fillText(copyRightText, 330 * scale, (height - 10) * scale);
 
-        ctx.fillStyle = '#FFF';
-        ctx.fillRect(
-            0,0, 
-            width * scale,height * scale
-        );
+    ctx.scale(scale, scale);
+    ctx.translate(bodyMargin, bodyMargin + titleHeight);
 
-        const copyRightText = [
-            'lab.magiconch.com/anime-grid' + urlExt,
-            '@卜卜口',
-            '神奇海螺试验场',
-            '动画信息来自番组计划',
-            '禁止商业、盈利用途'
-        ].join(' · ');
+    ctx.font = '16px sans-serif';
+    ctx.fillStyle = '#222';
+    ctx.textAlign = 'center';
 
+    ctx.save();
 
-        ctx.textAlign = 'left';
-        ctx.font = `${9 * scale}px sans-serif`;
-        ctx.fillStyle = '#AAA';
-        ctx.textBaseline = 'middle';
-        ctx.lineCap  = 'round';
-        ctx.lineJoin = 'round';
-        ctx.fillText(
-            copyRightText,
-            19 * scale,
-            (height - 10) * scale
-        );
+    ctx.font = 'bold 32px sans-serif';
+    ctx.fillText(title, contentWidth / 2, -26);
 
-        ctx.scale(scale,scale);
-        ctx.translate(
-            bodyMargin,
-            bodyMargin + titleHeight
-        );
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = '#222';
 
-        ctx.font = '16px sans-serif';
-        ctx.fillStyle = '#222';
-        ctx.textAlign = 'center';
+    for (let y = 0; y <= row; y++) {
+      ctx.beginPath();
+      ctx.moveTo(0, y * rowHeight);
+      ctx.lineTo(contentWidth, y * rowHeight);
+      ctx.globalAlpha = 1;
+      ctx.stroke();
 
-
-        ctx.save();
-
-
-        ctx.font = 'bold 32px sans-serif';
-        ctx.fillText(title,contentWidth / 2, -26 );
-
-
-
-
-        ctx.lineWidth = 2;
-        ctx.strokeStyle = '#222';
-
-        for(let y = 0;y <= row;y++){
-
-            ctx.beginPath();
-            ctx.moveTo(0,y * rowHeight);
-            ctx.lineTo(contentWidth,y * rowHeight);
-            ctx.globalAlpha = 1;
-            ctx.stroke();
-
-            if( y === row) break;
-            ctx.beginPath();
-            ctx.moveTo(0,y * rowHeight + rowHeight - fontHeight);
-            ctx.lineTo(contentWidth,y * rowHeight + rowHeight - fontHeight);
-            ctx.globalAlpha = .2;
-            ctx.stroke();
-        }
-        ctx.globalAlpha = 1;
-        for(let x = 0;x <= col;x++){
-            ctx.beginPath();
-            ctx.moveTo(x * colWidth,0);
-            ctx.lineTo(x * colWidth,contentHeight);
-            ctx.stroke();
-        }
-        ctx.restore();
-
-
-        for(let y = 0;y < row;y++){
-
-            for(let x = 0;x < col;x++){
-                const top = y * rowHeight;
-                const left = x * colWidth;
-                const type = types[y * col + x];
-                ctx.fillText(
-                    type,
-                    left + colWidth / 2,
-                    top + rowHeight - fontHeight / 2,
-                );
-            }
-        }
-
-
-        const imageWidth = colWidth - 2;
-        const imageHeight = rowHeight - fontHeight;
-        const canvasRatio = imageWidth / imageHeight;
-
-
-        this.imageWidth = imageWidth;
-        this.imageHeight = imageHeight;
-        this.colWidth = colWidth;
-        this.rowHeight = rowHeight;
-        this.canvasRatio = canvasRatio;
-        
-        ctx.font = 'bold 32px sans-serif';
-        
-        this.outputEl = el.querySelector('.output-box');
-        this.outputImageEl = this.outputEl.querySelector('img');
-
-
-        
-        canvas.onclick = e=>{
-            const rect = canvas.getBoundingClientRect();
-            const { clientX, clientY } = e;
-            const x = Math.floor(((clientX - rect.left) / rect.width * width - bodyMargin) / colWidth);
-            const y = Math.floor(((clientY - rect.top) / rect.height * height  - bodyMargin - titleHeight) / rowHeight);
-        
-            if(x < 0) return;
-            if(x >= col) return;
-            if(y < 0) return;
-            if(y > row) return;
-        
-            const index = y * col + x;
-        
-            if(index >= col * row) return;
-        
-            this.openSearchBox(index);
-        }
-        
-        el.onclick = e=>{
-            const { target } = e;
-            const action = target.getAttribute('action');
-            if(!action) return;
-            
-            const actionFunc = this[action];
-            if(!actionFunc) return;
-
-            actionFunc.call(this);
-        }
-        
-        this.drawBangumis();
-
+      if (y === row) break;
+      ctx.beginPath();
+      ctx.moveTo(0, y * rowHeight + rowHeight - fontHeight);
+      ctx.lineTo(contentWidth, y * rowHeight + rowHeight - fontHeight);
+      ctx.globalAlpha = 0.2;
+      ctx.stroke();
     }
-    generatorHTML({title}){
-        return `<canvas></canvas>
+    ctx.globalAlpha = 1;
+    for (let x = 0; x <= col; x++) {
+      ctx.beginPath();
+      ctx.moveTo(x * colWidth, 0);
+      ctx.lineTo(x * colWidth, contentHeight);
+      ctx.stroke();
+    }
+    ctx.restore();
+
+    for (let y = 0; y < row; y++) {
+      for (let x = 0; x < col; x++) {
+        const top = y * rowHeight;
+        const left = x * colWidth;
+        const type = types[y * col + x];
+        ctx.fillText(
+          type,
+          left + colWidth / 2,
+          top + rowHeight - fontHeight / 2
+        );
+      }
+    }
+
+    const imageWidth = colWidth - 2;
+    const imageHeight = rowHeight - fontHeight;
+    const canvasRatio = imageWidth / imageHeight;
+
+    this.imageWidth = imageWidth;
+    this.imageHeight = imageHeight;
+    this.colWidth = colWidth;
+    this.rowHeight = rowHeight;
+    this.canvasRatio = canvasRatio;
+
+    ctx.font = 'bold 32px sans-serif';
+
+    this.outputEl = el.querySelector('.output-box');
+    this.outputImageEl = this.outputEl.querySelector('img');
+
+    canvas.onclick = (e) => {
+      const rect = canvas.getBoundingClientRect();
+      const { clientX, clientY } = e;
+      const x = Math.floor(
+        (((clientX - rect.left) / rect.width) * width - bodyMargin) / colWidth
+      );
+      const y = Math.floor(
+        (((clientY - rect.top) / rect.height) * height -
+          bodyMargin -
+          titleHeight) /
+          rowHeight
+      );
+
+      if (x < 0) return;
+      if (x >= col) return;
+      if (y < 0) return;
+      if (y > row) return;
+
+      const index = y * col + x;
+
+      if (index >= col * row) return;
+
+      this.openSearchBox(index);
+    };
+
+    el.onclick = (e) => {
+      const { target } = e;
+      const action = target.getAttribute('action');
+      if (!action) return;
+
+      const actionFunc = this[action];
+      if (!actionFunc) return;
+
+      actionFunc.call(this);
+    };
+
+    this.drawBangumis();
+  }
+  generatorHTML({ title }) {
+    return `<canvas></canvas>
 <div class="ctrl-box">
     <a class="generator-btn ui-btn" action="downloadImage">生成${title}</a>
 </div>
@@ -263,8 +238,7 @@ class AnimeGrid {
         </form>
         <div class="anime-list"></div>
         <div class="foot">
-            <a class="close ui-btn" action="searchFromBangumi">在番组计划搜索</a>
-            <a class="close ui-btn" action="setInputText">没找到，就用搜索框里的文字了</a>
+            <a class="close ui-btn" action="searchFromBangumi">搜索</a>
             <a class="close ui-btn" action="setNull">重设为空</a>
             <a class="close ui-btn current" action="closeSearchBox">关闭选框</a>
         </div>
@@ -282,269 +256,251 @@ class AnimeGrid {
         </div>
     </div>
 </div>`;
+  }
+  generatorDefaultBangumis() {
+    this.bangumis = new Array(this.types.length).fill(null);
+  }
+  getBangumiIdsText() {
+    return this.bangumis.map((i) => String(i || 0)).join(',');
+  }
+
+  getBangumisFormLocalStorage() {
+    if (!window.localStorage) return this.generatorDefaultBangumis();
+
+    const bangumisText = localStorage.getItem(this.key);
+
+    if (!bangumisText) return this.generatorDefaultBangumis();
+
+    this.bangumis = bangumisText
+      .split(/,/g)
+      .map((i) => (/^\d+$/.test(i) ? +i : i));
+  }
+  saveBangumisToLocalStorage() {
+    localStorage.setItem(this.key, this.getBangumiIdsText());
+  }
+
+  openSearchBox(index) {
+    this.currentBangumiIndex = index;
+    htmlEl.setAttribute('data-no-scroll', true);
+    this.searchBoxEl.setAttribute('data-show', true);
+
+    this.searchInputEl.focus();
+
+    const value = '';
+
+    if (!/^\d+$/.test(value)) {
+      this.searchInputEl.value = value;
     }
-    generatorDefaultBangumis(){
-        this.bangumis = new Array(this.types.length).fill(null);
+    // this.searchFromAPI();
+  }
+  closeSearchBox() {
+    htmlEl.setAttribute('data-no-scroll', false);
+    this.searchBoxEl.setAttribute('data-show', false);
+    this.searchInputEl.value = '';
+  }
+
+  setInputText() {
+    const text = this.searchInputEl.value.trim().replace(/,/g, '');
+    if (!text) return this.searchInputEl.focus();
+    this.setCurrentBangumi(text);
+  }
+  setNull() {
+    this.setCurrentBangumi(null);
+  }
+
+  setCurrentBangumi(value) {
+    if (this.currentBangumiIndex === null) return;
+
+    this.bangumis[this.currentBangumiIndex] = value;
+    this.saveBangumisToLocalStorage();
+    this.drawBangumis();
+
+    this.closeSearchBox();
+  }
+
+  async searchFromBangumiByKeyword(keyword) {
+    let url = `${APIURL}`;
+    if (keyword) url = url + `?keyword=${encodeURIComponent(keyword)}`;
+
+    const animes = await get(url);
+    this.resetAnimeList(animes?.data);
+  }
+
+  searchFromBangumi() {
+    const keyword = this.searchInputEl.value.trim();
+    if (!keyword) return this.searchInputEl.focus();
+
+    this.searchFromBangumiByKeyword(keyword);
+  }
+
+  async searchFromAPI(keyword) {
+    let url = `${APIURL}`;
+    if (keyword) url = url + `?keyword=${encodeURIComponent(keyword)}`;
+
+    const animes = await get(url);
+    this.resetAnimeList(animes?.data);
+  }
+
+  resetAnimeList(animes) {
+    if (!Array.isArray(animes)) {
+      this.animeListEl.innerHTML = '';
     }
-    getBangumiIdsText(){
-        return this.bangumis.map(i=>String( i || 0 )).join(',')
-    }
+    this.animeListEl.innerHTML = animes
+      .map((anime) => {
+        return `<div class="anime-item" data-id="${
+          anime.cover
+        }"><img src="${getCoverURLById(anime)}" crossOrigin="Anonymous"><h3>${
+          anime.name
+        }</h3></div>`;
+      })
+      .join('');
+  }
 
-    getBangumisFormLocalStorage(){
-        
-        if(!window.localStorage) return this.generatorDefaultBangumis();
+  drawBangumis() {
+    const {
+      col,
+      row,
+      colWidth,
+      rowHeight,
+      imageWidth,
+      imageHeight,
+      bangumis,
+      canvasRatio,
+      ctx,
+    } = this;
 
-        const bangumisText = localStorage.getItem(this.key);
+    for (let index in bangumis) {
+      const id = bangumis[index];
 
-        if(!bangumisText) return this.generatorDefaultBangumis();
+      const x = index % col;
+      const y = Math.floor(index / col);
 
-        this.bangumis = bangumisText.split(/,/g).map(i=>/^\d+$/.test(i) ? +i : i);
-    }
-    saveBangumisToLocalStorage(){
-        localStorage.setItem(this.key,this.getBangumiIdsText());
-    }
+      if (!id) {
+        ctx.save();
+        ctx.fillStyle = '#FFF';
+        ctx.fillRect(
+          x * colWidth + 1,
+          y * rowHeight + 1,
+          imageWidth,
+          imageHeight
+        );
+        ctx.fillStyle = '#d3d3d3';
+        ctx.fillRect(
+          x * colWidth + 1,
+          y * rowHeight + imageHeight - 1,
+          imageWidth,
+          2
+        );
+        ctx.restore();
+        continue;
+      }
 
+      //   if (!/^\d+$/.test(id)) {
+      //     // 非数字
 
+      //     ctx.save();
+      //     ctx.fillStyle = '#FFF';
+      //     ctx.fillRect(
+      //       x * colWidth + 1,
+      //       y * rowHeight + 1,
+      //       imageWidth,
+      //       imageHeight
+      //     );
+      //     ctx.restore();
+      //     ctx.fillText(
+      //       id,
+      //       (x + 0.5) * colWidth,
+      //       (y + 0.5) * rowHeight - 4,
+      //       imageWidth - 10
+      //     );
+      //     continue;
+      //   }
 
-    openSearchBox(index){
-        this.currentBangumiIndex = index;
-        htmlEl.setAttribute('data-no-scroll',true);
-        this.searchBoxEl.setAttribute('data-show',true);
-        
-        this.searchInputEl.focus();
+      loadImage(getCoverURLById(id), (el) => {
+        const { naturalWidth, naturalHeight } = el;
+        const originRatio = el.naturalWidth / el.naturalHeight;
 
-        const value = this.bangumis[index] || '';
-
-        if(!/^\d+$/.test(value)){
-            this.searchInputEl.value = value;
+        let sw, sh, sx, sy;
+        if (originRatio < canvasRatio) {
+          sw = naturalWidth;
+          sh = (naturalWidth / imageWidth) * imageHeight;
+          sx = 0;
+          sy = naturalHeight - sh;
+        } else {
+          sh = naturalHeight;
+          sw = (naturalHeight / imageHeight) * imageWidth;
+          sx = naturalWidth - sw;
+          sy = 0;
         }
-        this.searchFromAPI();
+
+        ctx.drawImage(
+          el,
+
+          sx,
+          sy,
+          sw,
+          sh,
+
+          x * colWidth + 1,
+          y * rowHeight + 1,
+          imageWidth,
+          imageHeight
+        );
+      });
     }
-    closeSearchBox(){
-        htmlEl.setAttribute('data-no-scroll',false);
-        this.searchBoxEl.setAttribute('data-show',false);
-        this.searchInputEl.value = '';
-    }
-    
-    setInputText(){
-        const text = this.searchInputEl.value.trim().replace(/,/g,'');
-        if(!text) return this.searchInputEl.focus();
-        this.setCurrentBangumi(text);
-    }
-    setNull(){
-        this.setCurrentBangumi(null);
-    }
+  }
 
-    setCurrentBangumi(value){
-        if(this.currentBangumiIndex === null) return;
+  showOutput(imgURL) {
+    this.outputImageEl.src = imgURL;
+    this.outputEl.setAttribute('data-show', true);
+    htmlEl.setAttribute('data-no-scroll', true);
+  }
+  closeOutput() {
+    this.outputEl.setAttribute('data-show', false);
+    htmlEl.setAttribute('data-no-scroll', false);
+  }
 
-        this.bangumis[this.currentBangumiIndex] = value;
-        this.saveBangumisToLocalStorage();
-        this.drawBangumis();
+  downloadImage() {
+    const fileName = `${this.title}.jpg`;
+    const mime = 'image/jpeg';
+    const imgURL = this.canvas.toDataURL(mime, 0.8);
+    const linkEl = document.createElement('a');
+    linkEl.download = fileName;
+    linkEl.href = imgURL;
+    linkEl.dataset.downloadurl = [mime, fileName, imgURL].join(':');
+    document.body.appendChild(linkEl);
+    linkEl.click();
+    document.body.removeChild(linkEl);
+    new Image().src = `${APIURL}grid?ids=${this.getBangumiIdsText()}`;
 
-        this.closeSearchBox();
-    }
-
-
-    async searchFromBangumiByKeyword(keyword){
-        let url = `${APIURL}anime/onlines`;
-        if(keyword) url = url + `?keyword=${encodeURIComponent(keyword)}`;
-
-        const animes = await get(url);
-        this.resetAnimeList(animes);
-    }
-
-    searchFromBangumi(){
-        const keyword = this.searchInputEl.value.trim();
-        if(!keyword) return this.searchInputEl.focus();
-
-        this.searchFromBangumiByKeyword(keyword);
-    }
-
-
-    async searchFromAPI(keyword){
-        let url = `${APIURL}animes`;
-        if(keyword) url = url + `?keyword=${encodeURIComponent(keyword)}`;
-
-        const animes = await get(url);
-        this.resetAnimeList(animes);
-    }
-
-    resetAnimeList(animes){
-        this.animeListEl.innerHTML = animes.map(anime=>{
-            return `<div class="anime-item" data-id="${anime.id}"><img src="${getCoverURLById(anime.id)}" crossOrigin="Anonymous"><h3>${anime.title}</h3></div>`;
-        }).join('');
-    }
-
-    drawBangumis(){
-        const { 
-            col,row, 
-            colWidth,rowHeight, 
-            imageWidth,imageHeight,
-            bangumis,
-            canvasRatio,
-            ctx,
-        } = this;
-
-        for(let index in bangumis){
-            const id = bangumis[index];
-            const x = index % col;
-            const y = Math.floor(index / col);
-
-            if(!id){
-                ctx.save();
-                ctx.fillStyle = '#FFF';
-                ctx.fillRect(
-                    x * colWidth + 1,
-                    y * rowHeight + 1, 
-                    imageWidth,
-                    imageHeight,
-                )
-                ctx.fillStyle = '#d3d3d3';
-                ctx.fillRect(
-                    x * colWidth + 1,
-                    y * rowHeight + imageHeight - 1, 
-                    imageWidth,
-                    2,
-                )
-                ctx.restore();
-                continue;
-            }
-    
-            if(!/^\d+$/.test(id)){ // 非数字
-    
-                ctx.save();
-                ctx.fillStyle = '#FFF';
-                ctx.fillRect(
-                    x * colWidth + 1,
-                    y * rowHeight + 1, 
-                    imageWidth,
-                    imageHeight,
-                )
-                ctx.restore();
-                ctx.fillText(
-                    id,
-                    (x + 0.5) * colWidth,
-                    (y + 0.5) * rowHeight - 4, 
-                    imageWidth - 10,
-                );
-                continue;
-            }
-            
-            loadImage(getCoverURLById(id),el=>{
-                const { naturalWidth, naturalHeight } = el;
-                const originRatio = el.naturalWidth / el.naturalHeight;
-    
-                let sw, sh, sx, sy;
-                if(originRatio < canvasRatio){
-                    sw = naturalWidth
-                    sh = naturalWidth / imageWidth * imageHeight;
-                    sx = 0
-                    sy = (naturalHeight - sh)
-                }else{
-                    sh = naturalHeight
-                    sw = naturalHeight / imageHeight * imageWidth;
-                    sx = (naturalWidth - sw)
-                    sy = 0
-                }
-    
-                ctx.drawImage(
-                    el,
-                    
-                    sx, sy,
-                    sw, sh, 
-    
-                    x * colWidth + 1,
-                    y * rowHeight + 1, 
-                    imageWidth,
-                    imageHeight,
-                );
-            })
-        }
-    }
-    
-    
-    showOutput(imgURL){
-        this.outputImageEl.src = imgURL;
-        this.outputEl.setAttribute('data-show',true);
-        htmlEl.setAttribute('data-no-scroll',true);
-    }
-    closeOutput(){
-        this.outputEl.setAttribute('data-show',false);
-        htmlEl.setAttribute('data-no-scroll',false);
-    }
-    
-    downloadImage(){
-        const fileName = `[神奇海螺][${this.title}].jpg`;
-        const mime = 'image/jpeg';
-        const imgURL = this.canvas.toDataURL(mime,0.8);
-        const linkEl = document.createElement('a');
-        linkEl.download = fileName;
-        linkEl.href = imgURL;
-        linkEl.dataset.downloadurl = [ mime, fileName, imgURL ].join(':');
-        document.body.appendChild(linkEl);
-        linkEl.click();
-        document.body.removeChild(linkEl);
-        new Image().src = `${APIURL}grid?ids=${this.getBangumiIdsText()}`;
-    
-       this.showOutput(imgURL);
-    }
-
+    this.showOutput(imgURL);
+  }
 }
 
-
-
-
-// 提前准备一份缓存
-Caches[`${APIURL}animes`] = [
-	{
-		"id": 10380,
-		"title": "命运石之门"
-	},
-	{
-		"id": 9717,
-		"title": "魔法少女小圆"
-	},
-	{
-		"id": 265,
-		"title": "新世纪福音战士"
-	},
-	{
-		"id": 10639,
-		"title": "Fate/Zero"
-	},
-	{
-		"id": 27364,
-		"title": "冰菓"
-	},
-	{
-		"id": 876,
-		"title": "CLANNAD ～AFTER STORY～"
-	},
-	{
-		"id": 10440,
-		"title": "我们仍未知道那天所看见的花的名字。"
-	},
-	{
-		"id": 55770,
-		"title": "进击的巨人"
-	},
-	{
-		"id": 51,
-		"title": "CLANNAD"
-	},
-	{
-		"id": 1428,
-		"title": "钢之炼金术师 FULLMETAL ALCHEMIST"
-	},
-	{
-		"id": 160209,
-		"title": "你的名字。"
-	},
-	{
-		"id": 909,
-		"title": "龙与虎"
-	}
-]
-
-
+window.onload = () => {
+  const typeTexts = `
+  入坑作
+  最喜欢
+  看最多次
+  最想安利
+  最佳剧情
+  最佳作画
+  最佳人设
+  最佳发糖
+  最治愈
+  最感动
+  最虐心
+  最被低估
+  最过誉
+  最离谱
+  最讨厌
+  `;
+  new AnimeGrid({
+    el: document.querySelector('.anime-grid-box'),
+    title: '百合漫画个人喜好表',
+    key: 'margiconch-animes-grid',
+    typeTexts,
+    col: 5,
+    row: 3,
+  });
+};

@@ -1,53 +1,46 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>动画生涯个人喜好表生成器 - 神奇海螺试验场</title>
-    <meta name=keywords content="动画生涯,个人喜好表生成器,神奇海螺试验场,magiconch,卜卜口">
-    <link rel="stylesheet" href="document.css">
-</head>
-<body>
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>百合漫画个人喜好表生成器 - 百合厨小屋</title>
+    <meta
+      name="keywords"
+      content="百合漫画,个人喜好表生成器,magiconch,なつれい"
+    />
+    <link rel="stylesheet" href="document.less" />
+  </head>
+  <body>
     <div class="anime-grid-box"></div>
-    <div class="more-link-box">
-        <a href="ex.html">不够填？来试试格子超多的扩展版</a>
-    </div>
+
     <footer>
-        <a href="https://lab.magiconch.com/" target="_blank">神奇海螺试验场</a>
+      <a href="https://www.yuributa.com/" target="_blank">百合厨小屋</a>
+      <a href="https://space.bilibili.com/28704185" target="_blank"
+        >@なつれい</a
+      >
+      <span
+        >漫画信息来自
+        <a
+          href="https://note.yurilib.top/785b056c8a724d9bb123badf32ba70ab"
+          target="_blank"
+          >百合厨小屋，由yuriwiki提供数据</a
+        ></span
+      >
+      <br />
+      <span
+        >本工具由なつれいfork作者
         <a href="https://weibo.com/reiove" target="_blank">@卜卜口</a>
-        <a href="https://github.com/itorr/anime-grid" target="_blank">GitHub</a>
-        <span>动画信息来自 <a href="https://bgm.tv/" target="_blank">番组计划</a></span>
+        的工具<a href="https://github.com/itorr/anime-grid" target="_blank"
+          >动画生涯个人喜好表生成器</a
+        >
+        进行二次修改制作而成，欢迎关注原作者卜卜口
+      </span>
+      <br />
+      <span
+        >目前数据尚不完善，如果有想要的作品无法搜索到的，欢迎加群337497161来告诉我添加
+      </span>
     </footer>
     <script src="anime-grid.js"></script>
-<script>
-const typeTexts = `入坑作
-最喜欢
-看最多次
-最想安利
-
-最佳剧情
-最佳画面
-最佳配乐
-最佳配音
-
-最治愈
-最感动
-最虐心
-最被低估
-
-最过誉
-最离谱
-最讨厌
-`;
-new AnimeGrid({
-    el: document.querySelector('.anime-grid-box'),
-    title: '动画生涯个人喜好表',
-    key: 'margiconch-animes-grid',
-    typeTexts,
-    col: 5,
-    row: 3,
-})
-</script>
-</body>
+  </body>
 </html>
