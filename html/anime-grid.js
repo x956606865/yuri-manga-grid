@@ -1,12 +1,27 @@
-const APIURL = `https://backend.yuributa.com/manga/info/search`;
+const APIURL = `https://backend.yuributa.com/manga/searchGrid`;
+// const APIURL = `https://backend.yuributa.com/manga/info/search`;
 const Caches = {};
 const htmlEl = document.documentElement;
-const get = async (url) => {
+const get = async (url, keyword) => {
   //   if (Caches[url]) return Caches[url];
   htmlEl.setAttribute('data-no-touch', true);
-  const f = await fetch(url);
+  const myHeaders = new Headers();
+
+  myHeaders.append('Content-Type', 'application/json');
+  const f = await fetch(url, {
+    method: 'post',
+    headers: myHeaders,
+    body: JSON.stringify({
+      q: keyword,
+    }),
+  });
   const data = await f.json();
-  Caches[url] = data;
+  console.log(
+    '%c [ data ]-15',
+    'font-size:13px; background:pink; color:#bf2c9f;',
+    data
+  );
+  Caches[`${url}_${keyword}`] = data;
   htmlEl.setAttribute('data-no-touch', false);
   return data;
 };
@@ -322,8 +337,8 @@ class AnimeGrid {
     let url = `${APIURL}`;
     if (keyword) url = url + `?keyword=${encodeURIComponent(keyword)}`;
 
-    const animes = await get(url);
-    this.resetAnimeList(animes?.data);
+    const animes = await get(url, keyword);
+    this.resetAnimeList(animes);
   }
 
   searchFromBangumi() {
@@ -337,8 +352,8 @@ class AnimeGrid {
     let url = `${APIURL}`;
     if (keyword) url = url + `?keyword=${encodeURIComponent(keyword)}`;
 
-    const animes = await get(url);
-    this.resetAnimeList(animes?.data);
+    const animes = await get(url, keyword);
+    this.resetAnimeList(animes);
   }
 
   resetAnimeList(animes) {
@@ -347,11 +362,17 @@ class AnimeGrid {
     }
     this.animeListEl.innerHTML = animes
       .map((anime) => {
+        const name =
+          anime?.displayName?.length > 0
+            ? anime?.displayName
+            : anime?.name_cn?.length > 0
+            ? anime?.name_cn
+            : anime?.name_origin;
         return `<div class="anime-item" data-id="${
           anime.cover
-        }"><img src="${getCoverURLById(anime)}" crossOrigin="Anonymous"><h3>${
-          anime.name
-        }</h3></div>`;
+        }"><img src="${getCoverURLById(
+          anime
+        )}" crossOrigin="Anonymous"><h3>${name}</h3></div>`;
       })
       .join('');
   }
